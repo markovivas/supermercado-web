@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  color     String?   @default("#10b981")
+  icon      String?   @default("shopping-bag")
+  products  Product[]
+  createdAt DateTime  @default(now())
+}
+
+model Store {
+  id           Int            @id @default(autoincrement())
+  name         String         @unique
+  address      String?
+  color        String?        @default("#3b82f6")
+  trips        PurchaseTrip[]
+  priceHistory PriceHistory[]
+  createdAt    DateTime       @default(now())
+}
+
+model Product {
+  id            Int            @id @default(autoincrement())
+  name          String
+  barcode       String?        @unique
+  categoryId    Int
+  category      Category       @relation(fields: [categoryId], references: [id])
+  defaultUnit   String         @default("un")
+  defaultPrice  Float          @default(0.0)
+  brand         String?
+  imageUrl      String?
+  purchaseItems PurchaseItem[]
+  priceHistory  PriceHistory[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model PurchaseTrip {
+  id          Int            @id @default(autoincrement())
+  storeId     Int
+  store       Store          @relation(fields: [storeId], references: [id])
+  date        DateTime       @default(now())
+  status      String         @default("in_progress") // "in_progress" | "completed" | "cancelled"
+  totalAmount Float          @default(0.0)
+  notes       String?
+  items       PurchaseItem[]
+  createdAt   DateTime       @default(now())
+  completedAt DateTime?
+}
+
+model PurchaseItem {
+  id         Int          @id @default(autoincrement())
+  tripId     Int
+  trip       PurchaseTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  productId  Int
+  product    Product      @relation(fields: [productId], references: [id])
+  quantity   Float        @default(1.0)
+  unit       String       @default("un")
+  unitPrice  Float
+  totalPrice Float
+  notes      String?
+  createdAt  DateTime     @default(now())
+}
+
+model PriceHistory {
+  id         Int      @id @default(autoincrement())
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storeId    Int
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  price      Float
+  unit       String   @default("un")
+  recordedAt DateTime @default(now())
+
+  @@index([productId, storeId])
+}
