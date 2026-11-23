@@ -62,6 +62,127 @@ csvRouter.get('/export/purchases', async (_req: Request, res: Response) => {
   }
 });
 
+// Exportar Lojas/Supermercados em CSV
+csvRouter.get('/export/stores', async (_req: Request, res: Response) => {
+  try {
+    const stores = await prisma.store.findMany({
+      orderBy: [{ order: 'asc' }, { id: 'asc' }],
+    });
+
+    const header = 'Nome;Endereço;Telefone;Cor;Ordem';
+    const rows = stores.map((s) => {
+      return `"${s.name}";"${s.address || ''}";"${s.phone || ''}";"${s.color || '#3b82f6'}";"${s.order}"`;
+    });
+
+    const csvContent = '\uFEFF' + [header, ...rows].join('\r\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="supermercados_${Date.now()}.csv"`);
+    res.send(csvContent);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao exportar supermercados' });
+  }
+});
+
+// Importar Lojas/Supermercados via CSV
+csvRouter.post('/import/stores', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    }
+
+    const content = req.file.buffer.toString('utf-8').replace(/^\uFEFF/, '');
+    const lines = content.split(/\r?\n/).filter((line) => line.trim().length > 0);
+
+    if (lines.length < 2) {
+      return res.status(400).json({ error: 'Arquivo CSV vazio ou sem dados' });
+    }
+
+    let imported = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    const firstLine = lines[0];
+    const separator = firstLine.includes(';') ? ';' : ',';
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      const columns = line
+        .split(separator)
+        .map((col) => col.replace(/^"(.*)"$/, '$1').trim());
+
+      if (columns.length < 1) {
+        skipped++;
+        continue;
+      }
+
+      const name = columns[0];
+      const address = columns[1] || null;
+      const phone = columns[2] || null;
+      const color = columns[3] || '#3b82f6';
+      const orderRaw = columns[4] ? parseInt(columns[4], 10) : undefined;
+
+      if (!name) {
+        skipped++;
+        continue;
+      }
+
+      // Procura loja existente por nome e endereço (se fornecido) ou por nome
+      let existing = null;
+      if (address) {
+        existing = await prisma.store.findFirst({
+          where: { name, address },
+        });
+      }
+      if (!existing) {
+        existing = await prisma.store.findFirst({
+          where: { name },
+        });
+      }
+
+      if (existing) {
+        await prisma.store.update({
+          where: { id: existing.id },
+          data: {
+            address: address !== null ? address : existing.address,
+            phone: phone !== null ? phone : existing.phone,
+            color: color || existing.color,
+            order: orderRaw !== undefined && !isNaN(orderRaw) ? orderRaw : existing.order,
+          },
+        });
+        updated++;
+      } else {
+        const lastStore = await prisma.store.findFirst({ orderBy: { order: 'desc' } });
+        const finalOrder = orderRaw !== undefined && !isNaN(orderRaw) ? orderRaw : (lastStore?.order ?? 0) + 1;
+
+        await prisma.store.create({
+          data: {
+            name,
+            address: address || null,
+            phone: phone || null,
+            color: color || '#3b82f6',
+            order: finalOrder,
+          },
+        });
+        imported++;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Importação de supermercados concluída: ${imported} novos, ${updated} atualizados, ${skipped} ignorados.`,
+      imported,
+      updated,
+      skipped,
+    });
+  } catch (error) {
+    console.error('Erro na importação de CSV de lojas:', error);
+    res.status(500).json({ error: 'Erro ao processar arquivo CSV de supermercados' });
+  }
+});
+
 // Importar Produtos via CSV
 csvRouter.post('/import/products', upload.single('file'), async (req: Request, res: Response) => {
   try {

@@ -61,6 +61,42 @@ export const api = {
       throw new Error(err.error || 'Erro ao excluir loja');
     }
   },
+  async updateStore(id: number, data: Partial<Store>): Promise<Store> {
+    const res = await fetch(`${BASE_URL}/stores/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Erro ao atualizar loja');
+    }
+    return res.json();
+  },
+  async moveStore(id: number, direction: 'up' | 'down' | 'top' | 'bottom'): Promise<Store[]> {
+    const res = await fetch(`${BASE_URL}/stores/${id}/move`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ direction }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Erro ao alterar posição da loja');
+    }
+    return res.json();
+  },
+  async reorderStores(storeIds: number[]): Promise<{ success: boolean; message: string }> {
+    const res = await fetch(`${BASE_URL}/stores/reorder/batch`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storeIds }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Erro ao reordenar lojas');
+    }
+    return res.json();
+  },
 
   // Produtos
   async getProducts(params?: { search?: string; categoryId?: number; barcode?: string }): Promise<Product[]> {
@@ -225,6 +261,19 @@ export const api = {
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.error || 'Erro ao importar CSV');
+    }
+    return res.json();
+  },
+  async importStoresCsv(file: File): Promise<{ message: string; imported: number; updated: number; skipped: number }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${BASE_URL}/csv/import/stores`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Erro ao importar CSV de supermercados');
     }
     return res.json();
   },

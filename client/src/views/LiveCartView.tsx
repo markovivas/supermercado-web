@@ -366,18 +366,27 @@ export const LiveCartView: React.FC<LiveCartViewProps> = ({
                 <StoreIcon className="w-4 h-4 text-emerald-600" />
                 Qual supermercado ou loja você está visitando?
               </label>
-              <select
-                required
-                value={selectedStoreId}
-                onChange={(e) => setSelectedStoreId(Number(e.target.value))}
-                className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-base font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500 bg-white shadow-xs"
-              >
-                {stores.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} {s.address ? `— ${s.address}` : ''}
-                  </option>
-                ))}
-              </select>
+              {stores.length === 0 ? (
+                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 space-y-1">
+                  <p className="font-bold">Nenhum supermercado cadastrado ainda.</p>
+                  <p className="text-amber-700">
+                    Cadastre um supermercado ou importe seu arquivo CSV na aba <strong>Configurações</strong> antes de iniciar uma compra.
+                  </p>
+                </div>
+              ) : (
+                <select
+                  required
+                  value={selectedStoreId}
+                  onChange={(e) => setSelectedStoreId(Number(e.target.value))}
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-base font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500 bg-white shadow-xs"
+                >
+                  {stores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} {s.address ? `— ${s.address}` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

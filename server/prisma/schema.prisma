@@ -18,9 +18,11 @@ model Category {
 
 model Store {
   id           Int            @id @default(autoincrement())
-  name         String         @unique
+  name         String
   address      String?
+  phone        String?
   color        String?        @default("#3b82f6")
+  order        Int            @default(0)
   trips        PurchaseTrip[]
   priceHistory PriceHistory[]
   createdAt    DateTime       @default(now())

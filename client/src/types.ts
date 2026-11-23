@@ -12,7 +12,9 @@ export interface Store {
   id: number;
   name: string;
   address?: string | null;
+  phone?: string | null;
   color?: string;
+  order?: number;
   _count?: {
     trips: number;
   };
